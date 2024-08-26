@@ -42,7 +42,7 @@ class Program
         //outputDevice.Play();
 
 
-        sampleRate = audioReader.WaveFormat.SampleRate;
+        int sampleRate = audioReader.WaveFormat.SampleRate;
         window.SetFramerateLimit(FPS);
 
         // Вычисляем максимальную амплитуду для масштабирования
@@ -84,7 +84,8 @@ class Program
             window.Draw(line.ToArray(), PrimitiveType.Points);
             window.Display();
 
-            window.Capture().SaveToFile(@$"Frames\frame_{countFrames:D9}.png");
+            //window.Capture().SaveToFile(@$"Frames\frame_{countFrames:D9}.png");
+            SaveImage(countFrames, window.Capture());
             Console.WriteLine($"{countFrames}/{FPS * audioReader.TotalTime.TotalSeconds}");
 
             countFrames++;
@@ -114,7 +115,10 @@ class Program
             );
     }
 
-    private static int sampleRate;
+    private static void SaveImage(int frameNum, Image image)
+    {
+        new Task(() => image.SaveToFile(@$"Frames\frame_{frameNum:D9}.png")).Start();
+    }
 
     private static void InstanceFilder(string path)
     {

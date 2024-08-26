@@ -1,163 +1,125 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using ConsoleApp1;
+﻿using ConsoleApp1;
 using NAudio.Wave;
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
-using static SFML.Window.Keyboard;
 
 class Program
 {
     static void Main(string[] args)
     {
-        //string mp3FilePath = @"C:\Users\RMK\Music\Max for Live patch_ trop 0.4 (192kbps).mp3";
-        string mp3FilePath = @"C:\Users\RMK\Music\Jerobeam Fenderson - Shrooms (320kbps).mp3";
-        //string mp3FilePath = @"C:\Users\RMK\Music\Derivakat_-_REVIVED_73357566.mp3";
-        //string mp3FilePath = @"https://rus.hitmotop.com/get/music/20190329/Billie_Eilish_-_bad_guy_63132977.mp3";
+        string mp3FilePath = @"Music\Jerobeam Fenderson - Shrooms.mp3";
+
         // Инициализация аудио
-        var samplesLeft = new List<float>();
-        var samplesRight = new List<float>();
+        var samplesLeft = new float[0];
+        var samplesRight = new float[0];
+
         using (var reader = new AudioFileReader(mp3FilePath))
         {
+            int totalSamples = (int)reader.Length / sizeof(float) / reader.WaveFormat.Channels;
+            samplesLeft = new float[totalSamples];
+            samplesRight = new float[totalSamples];
+
             float[] buffer = new float[reader.WaveFormat.SampleRate * reader.WaveFormat.Channels];
-            int samplesRead;
+            int samplesRead, bufferIndex = 0;
+
             while ((samplesRead = reader.Read(buffer, 0, buffer.Length)) > 0)
             {
                 for (int i = 0; i < samplesRead; i += 2) // Чтение по 2 канала
                 {
-                    samplesLeft.Add(buffer[i]); // Левый канал
-                    samplesRight.Add(buffer[i + 1]); // Правый канал
+                    samplesLeft[bufferIndex] = buffer[i]; // Левый канал
+                    samplesRight[bufferIndex] = buffer[i + 1]; // Правый канал
+                    bufferIndex++;
                 }
             }
         }
-        int FPS = 144;  // Устанавливаем фиксированный FPS
+        var window = new RenderWindow(new VideoMode(1920, 1080), "Lissajous Figures");
+        uint FPS = 144; 
 
         var audioReader = new AudioFileReader(mp3FilePath);
-
         var outputDevice = new WaveOutEvent();
         outputDevice.Init(audioReader);
-        outputDevice.Play();
+        //outputDevice.Play();
 
-        // Инициализация окна SFML
-        var window = new RenderWindow(new VideoMode(1000, 1000), "Lissajous Figures");
 
-        // Параметры отображения
         sampleRate = audioReader.WaveFormat.SampleRate;
-        int sampleOffset = 0;
+        window.SetFramerateLimit(FPS);
 
-        // Ограничиваем частоту кадров
-        window.SetFramerateLimit((uint)FPS);
+        // Вычисляем максимальную амплитуду для масштабирования
+        float maxAmplitude = 0;
+        for (int i = 0; i < samplesLeft.Length; i++)
+        {
+            maxAmplitude = Math.Max(maxAmplitude, Math.Max(samplesLeft[i], samplesRight[i]));
+        }
 
-        int frameCount = 0;
+        float scale = Math.Min(window.Size.X, window.Size.Y) / 4.0f / maxAmplitude;
+        int step = (int)(sampleRate / FPS);
+        int countFrames = 0; //(int)(FPS * audioReader.TotalTime.TotalSeconds * 0.3f);
+
+        InstanceFilder("Frames");
 
         FPSCounter fpsCounter = new FPSCounter();
-
-        fpsCounter.Update();
-
-        while (window.IsOpen)
+        while (window.IsOpen && FPS * audioReader.TotalTime.TotalSeconds > countFrames)
         {
-            line.Clear();
-
+            fpsCounter.Update();
             window.DispatchEvents();
             window.Clear(Color.Black);
 
-            int step = (int)(sampleRate / fpsCounter.FPS);  // Количество семплов на один фрейм
-            Limit = step;
-            // Используем счетчик кадров для расчета смещения
-            sampleOffset = (int)(audioReader.CurrentTime.TotalSeconds * sampleRate);
+            int sampleOffset = countFrames * step;
 
-            // Предварительная обработка для масштабирования амплитуд
-            float maxAmplitude = Math.Max(samplesLeft.Max(), samplesRight.Max());
-            float scale = Math.Min(window.Size.X, window.Size.Y) / 4.0f / maxAmplitude;
+            List<Vertex> line = new List<Vertex>();
 
             for (int t = 0; t < step; t++)
             {
                 int currentSampleIndex = sampleOffset + t;
-                if (currentSampleIndex >= samplesLeft.Count || currentSampleIndex >= samplesRight.Count)
+                if (currentSampleIndex >= samplesLeft.Length || currentSampleIndex >= samplesRight.Length)
                     break;
 
-                float A = samplesLeft[currentSampleIndex];  // Амплитуда левого канала по X
-                float B = samplesRight[currentSampleIndex]; // Амплитуда правого канала по Y
+                float x = scale * samplesLeft[currentSampleIndex];
+                float y = scale * samplesRight[currentSampleIndex];
 
-                float omega = 2 * (float)Math.PI * t / sampleRate;
-
-                // Классическая форма Лиссажу
-                float x = scale * A * (float)Math.Cos(omega);
-                float y = scale * B * (float)Math.Cos(omega);
-
-                Add(new Vertex(new Vector2f(window.Size.X / 2 + x, window.Size.Y / 2 - y), Color.Green));
+                line.Add(new Vertex(new Vector2f(window.Size.X / 2 + x, window.Size.Y / 2 - y), Color.Green));
             }
-            frameCount++;
-            window.Draw(line.ToArray(), PrimitiveType.LineStrip);
+
+            window.Draw(line.ToArray(), PrimitiveType.Points);
             window.Display();
-            fpsCounter.Update();
+
+            window.Capture().SaveToFile(@$"Frames\frame_{countFrames:D9}.png");
+            Console.WriteLine($"{countFrames}/{FPS * audioReader.TotalTime.TotalSeconds}");
+
+            countFrames++;
         }
 
         window.Close();
 
-        // Освобождение ресурсов
         outputDevice.Dispose();
         audioReader.Dispose();
 
         InstanceFilder("OutVideo");
 
         FFMpegUtils.ConcatFrames(
-            FPS: 144,
+            FPS: FPS,
             paternFrames: "frame_%09d.png",
-            pathToFrames: "Test",
+            pathToFrames: "Frames",
             pathOutVideo: "OutVideo",
             outNameFile: "Test");
+
+        InstanceFilder("OutResult");
+
+        FFMpegUtils.VideoConcatAudio(
+            pathToVideo: @"OutVideo\Test.mp4",
+            pathToAudio: mp3FilePath,
+            pathOutVideo: "OutResult",
+            outNameFile: "Result"
+            );
     }
+
     private static int sampleRate;
-    private static int Limit;
-    private static List<Vertex> line = new();
-    private static void Add(Vertex obj)
-    {
-        line.Add(obj);
-        if(line.Count > Limit)
-            line.RemoveAt(0);
-    }
 
     private static void InstanceFilder(string path)
     {
         if (Directory.Exists(path))
             Directory.Delete(path, true);
         Directory.CreateDirectory(path);
-    }
-
-    private static void DrawLissajousFigure(RenderWindow window, float[] samplesLeft, float[] samplesRight, int offset, int sampleRate)
-    {
-        var width = window.Size.X;
-        var height = window.Size.Y;
-
-        VertexArray lissajous = new VertexArray(PrimitiveType.LineStrip);
-
-        // Убедимся, что не выйдем за пределы массива
-        if (offset + sampleRate / 30 > samplesLeft.Length || offset + sampleRate / 30 > samplesRight.Length)
-            return;
-
-        // Предварительная обработка для масштабирования амплитуд
-        float maxAmplitude = Math.Max(samplesLeft.Max(), samplesRight.Max());
-        float scale = Math.Min(1000, 1000) / 4.0f / maxAmplitude;
-
-        for (int t = 0; t < sampleRate / 30; t++)
-        {
-            float A =  samplesLeft[offset + t];  // Амплитуда левого канала по X
-            float B = samplesRight[offset + t]; // Амплитуда правого канала по Y
-
-            // Используем omega для создания гармонического движения
-            float omega = 2 * (float)Math.PI * t / sampleRate;
-            float alpha = (float)Math.PI / 2 * (A + B) / 2;
-            // Классическая форма Лиссажу
-            float x = scale * A * (float)Math.Cos(omega);
-            float y = scale * B * (float)Math.Cos(omega);
-
-            lissajous.Append(new Vertex(new Vector2f(width / 2 + x, height / 2 - y), Color.Green));
-        }
-
-        window.Draw(lissajous);
     }
 }

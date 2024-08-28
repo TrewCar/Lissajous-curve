@@ -12,7 +12,7 @@ class Program
 
         using (var capture = new WasapiLoopbackCapture())
         {
-            var window = new RenderWindow(new VideoMode(500, 500), "Lissajous Figures");
+            var window = new RenderWindow(new VideoMode(800, 800), "Lissajous Figures");
             window.Closed += (s, a) => { window.Close(); capture.StopRecording(); };
             uint FPS = 30;
             //window.SetFramerateLimit(FPS);
@@ -31,7 +31,7 @@ class Program
             {
                 window.SetActive(true);
                 fpsCounter.Update();
-                window.DispatchEvents();
+
                 window.Clear(Color.Black);
 
                 List<Vertex> line = new List<Vertex>();
@@ -44,7 +44,7 @@ class Program
                     line.Add(new Vertex(new Vector2f(window.Size.X / 2 + x, window.Size.Y / 2 - y), Color.Green));
                 }
 
-                window.Draw(line.ToArray(), PrimitiveType.LineStrip);
+                window.Draw(line.ToArray(), PrimitiveType.Points);
 
 
                 countFrames++;
@@ -54,7 +54,7 @@ class Program
 
             capture.StartRecording();
 
-            while (window.IsOpen) { }
+            while (window.IsOpen) { window.DispatchEvents(); }
         }
     }
 }

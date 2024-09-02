@@ -1,16 +1,14 @@
-﻿using ConsoleApp1;
-using ConsoleApp1.GenWaves;
-using NAudio.CoreAudioApi;
-using NAudio.Wave;
+﻿using GenWaves;
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
+using Utils;
 
 class Program
 {
     static void Main(string[] args)
     {
-        var window = new RenderWindow(new VideoMode(800, 800), "Lissajous Figures");
+        var window = new RenderWindow(new VideoMode(1000, 1000), "Lissajous Figures");
         window.Closed += (s, a) => { window.Close(); };
         uint FPS = 30;
 
@@ -28,7 +26,7 @@ class Program
         };
 
         //AudioGenerator waveGenerator = new WaveGenerator(44100, (int)FPS, waves);
-        NAudioPcConverter waveGenerator = new NAudioPcConverter();
+        AudioGenerator waveGenerator = new NAudioMicrophoneConverter();
         window.SetActive(false);
         FPSCounter fpsCounter = new FPSCounter();
 

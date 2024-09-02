@@ -1,18 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Utils;
 
-namespace ConsoleApp1.GenWaves
+namespace GenWaves
 {
     public delegate void StereoWaveDelegate(float[] leftChannel, float[] rightChannel);
     public class WaveGenerator : AudioGenerator
     {
         public List<Wave> Waves { get; set; }
-        public WaveGenerator(int bitRate, int fps, List<Wave> waves) : base(bitRate, fps) 
+        public WaveGenerator(int bitRate, int fps, List<Wave> waves) : base(bitRate, fps)
         {
-            this.Waves = waves;
+            Waves = waves;
         }
 
         public override void StartGenerating(StereoWaveDelegate stereoWaveDelegate)
@@ -20,14 +16,13 @@ namespace ConsoleApp1.GenWaves
             new Task(() =>
             {
                 FPSCounter counter = new FPSCounter();
-                while (true)
+                while (!this.End)
                 {
-                    int samplesPerFrame = (int)(BitRate / FPS);
+                    int samplesPerFrame = BitRate;
 
                     float[] leftChannel = new float[samplesPerFrame];
                     float[] rightChannel = new float[samplesPerFrame];
 
-                    // Предполагается, что у нас есть список волн
                     foreach (var wave in Waves)
                     {
                         wave.GenerateSamples(leftChannel, rightChannel, BitRate, samplesPerFrame);
@@ -35,13 +30,13 @@ namespace ConsoleApp1.GenWaves
 
                     stereoWaveDelegate(leftChannel, rightChannel);
                     counter.Update();
-                    Task.Delay((int)(1000f / (float)FPS)).Wait();
+                    Task.Delay((int)(1000f / FPS)).Wait();
                 }
             }).Start();
         }
         public override void Dispose()
         {
-            
+            base.Dispose();
         }
     }
 }

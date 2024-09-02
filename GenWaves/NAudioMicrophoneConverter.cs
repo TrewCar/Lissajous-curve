@@ -6,10 +6,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ConsoleApp1.GenWaves
+namespace GenWaves
 {
-    class NAudioMicrophoneConverter : NAudioConverter<WasapiCapture>
+    public class NAudioMicrophoneConverter : NAudioConverter<WasapiCapture>
     {
-        public NAudioMicrophoneConverter() : base(new WasapiCapture()) { }
+        public NAudioMicrophoneConverter() : base() { }
     }
 }

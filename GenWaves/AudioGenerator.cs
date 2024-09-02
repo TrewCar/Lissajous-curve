@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ConsoleApp1.GenWaves
+﻿namespace GenWaves
 {
     public abstract class AudioGenerator : IDisposable
     {
         public int BitRate { get; set; }
         public int FPS { get; set; }
+
+        protected bool End = false;
 
         protected AudioGenerator(int bitRate, int fps)
         {
@@ -19,6 +15,9 @@ namespace ConsoleApp1.GenWaves
 
         public abstract void StartGenerating(StereoWaveDelegate stereoWaveDelegate);
 
-        public abstract void Dispose();
+        public virtual void Dispose()
+        {
+            End = true;
+        }
     }
 }

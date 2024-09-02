@@ -1,23 +1,19 @@
 ﻿using NAudio.CoreAudioApi;
-using NAudio.Wave;
-using System.Text.RegularExpressions;
 
-namespace ConsoleApp1.GenWaves
+namespace GenWaves
 {
-    public class NAudioConverter<T> : AudioGenerator where T : WasapiCapture, new()
+    public abstract class NAudioConverter<T> : AudioGenerator where T : WasapiCapture, new()
     {
         private T Capture;
-        public NAudioConverter(T Capture) : base(0, 0)
+        public NAudioConverter() : base(0, 0)
         {
-            this.Capture = Capture;
+            Capture = new();
         }
 
         public override void StartGenerating(StereoWaveDelegate stereoWaveDelegate)
         {
             Capture.DataAvailable += (s, a) =>
             {
-                int samplesPerFrame = (int)(BitRate / FPS);
-
                 List<float> leftChannel = new List<float>();
                 List<float> rightChannal = new List<float>();
 
@@ -29,10 +25,14 @@ namespace ConsoleApp1.GenWaves
                 }
                 stereoWaveDelegate(leftChannel.ToArray(), rightChannal.ToArray());
             };
+            Capture.StartRecording();
+            BitRate = Capture.WaveFormat.SampleRate;
         }
 
         public override void Dispose()
         {
+            base.Dispose();
+            Capture.StopRecording();
             Capture.Dispose();
         }
     }

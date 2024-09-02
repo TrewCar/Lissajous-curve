@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ConsoleApp1.GenWaves
+namespace GenWaves
 {
     public class NAudioPcConverter : NAudioConverter<WasapiLoopbackCapture>
     {
-        public NAudioPcConverter() : base(new WasapiLoopbackCapture()) { }
+        public NAudioPcConverter() : base() { }
     }
 }

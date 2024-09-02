@@ -1,4 +1,5 @@
 ﻿using ConsoleApp1;
+using ConsoleApp1.GenWaves;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using SFML.Graphics;
@@ -9,25 +10,47 @@ class Program
 {
     static void Main(string[] args)
     {
+        var window = new RenderWindow(new VideoMode(800, 800), "Lissajous Figures");
+        window.Closed += (s, a) => { window.Close(); };
+        uint FPS = 30;
 
-        using (var capture = new WasapiLoopbackCapture())
+        float maxAmplitude = 1.0f;
+        float scale = Math.Min(window.Size.X, window.Size.Y) / 4.0f / maxAmplitude;
+
+        int sampleRate = 44100; // Задаем битрейт
+        int step = sampleRate / (int)FPS;
+
+        List<Wave> waves = new List<Wave>
         {
-            var window = new RenderWindow(new VideoMode(800, 800), "Lissajous Figures");
-            window.Closed += (s, a) => { window.Close(); capture.StopRecording(); };
-            uint FPS = 30;
-            //window.SetFramerateLimit(FPS);
+            new Wave(440f, 0.5f, -50),  // В левом канале
+            new Wave(880f, 0.3f, 50),   // В правом канале
+            //new Wave(660f, 0.2f, 0),    // В обоих каналах равномерно
+        };
 
-            float maxAmplitude = 1.0f;
-            float scale = Math.Min(window.Size.X, window.Size.Y) / 4.0f / maxAmplitude;
+        WaveGenerator waveGenerator = new WaveGenerator(sampleRate, (int)FPS);
 
-            int sampleRate = capture.WaveFormat.SampleRate;
-            int step = sampleRate / (int)FPS;
-            int countFrames = 0;
-            window.SetActive(false);
-            FPSCounter fpsCounter = new FPSCounter();
+        window.SetActive(false);
+        FPSCounter fpsCounter = new FPSCounter();
 
-            // Обработка аудио данных при их получении
-            capture.DataAvailable += (s, a) =>
+        float[] leftChannel = new float[step];
+        float[] rightChannel = new float[step];
+        bool dataReady = false;
+
+        // Генерация стерео данных в отдельной задаче
+        waveGenerator.GenerateStereoWave(waves, (left, right) =>
+        {
+            lock (leftChannel)
+            {
+                Array.Copy(left, leftChannel, step);
+                Array.Copy(right, rightChannel, step);
+                dataReady = true;
+            }
+        });
+
+        // Основной цикл визуализации
+        while (window.IsOpen)
+        {
+            if (dataReady)
             {
                 window.SetActive(true);
                 fpsCounter.Update();
@@ -36,25 +59,24 @@ class Program
 
                 List<Vertex> line = new List<Vertex>();
 
-                for (int i = 4; i < a.BytesRecorded; i +=8)
+                lock (leftChannel)
                 {
-                    float x = scale * BitConverter.ToSingle(a.Buffer, i);
-                    float y = scale * BitConverter.ToSingle(a.Buffer, i + 4);
+                    for (int i = 0; i < step; i++)
+                    {
+                        float x = scale * leftChannel[i];
+                        float y = scale * rightChannel[i];
 
-                    line.Add(new Vertex(new Vector2f(window.Size.X / 2 + x, window.Size.Y / 2 - y), Color.Green));
+                        line.Add(new Vertex(new Vector2f(window.Size.X / 2 + x, window.Size.Y / 2 - y), Color.Green));
+                    }
+
+                    dataReady = false;
                 }
 
                 window.Draw(line.ToArray(), PrimitiveType.Points);
-
-
-                countFrames++;
-
                 window.Display();
-            };
+            }
 
-            capture.StartRecording();
-
-            while (window.IsOpen) { window.DispatchEvents(); }
+            window.DispatchEvents();
         }
     }
 }

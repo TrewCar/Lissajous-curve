@@ -7,19 +7,15 @@ using System.Threading.Tasks;
 namespace ConsoleApp1.GenWaves
 {
     public delegate void StereoWaveDelegate(float[] leftChannel, float[] rightChannel);
-    public class WaveGenerator
+    public class WaveGenerator : AudioGenerator
     {
-        public int BitRate { get; set; }
-        public int FPS { get; set; }
-
-
-        public WaveGenerator(int bitRate, int fps)
+        public List<Wave> Waves { get; set; }
+        public WaveGenerator(int bitRate, int fps, List<Wave> waves) : base(bitRate, fps) 
         {
-            BitRate = bitRate;
-            FPS = fps;
+            this.Waves = waves;
         }
 
-        public void GenerateStereoWave(List<Wave> waves, StereoWaveDelegate stereoWaveDelegate)
+        public override void StartGenerating(StereoWaveDelegate stereoWaveDelegate)
         {
             new Task(() =>
             {
@@ -31,16 +27,21 @@ namespace ConsoleApp1.GenWaves
                     float[] leftChannel = new float[samplesPerFrame];
                     float[] rightChannel = new float[samplesPerFrame];
 
-                    foreach (var wave in waves)
+                    // Предполагается, что у нас есть список волн
+                    foreach (var wave in Waves)
                     {
                         wave.GenerateSamples(leftChannel, rightChannel, BitRate, samplesPerFrame);
                     }
 
                     stereoWaveDelegate(leftChannel, rightChannel);
                     counter.Update();
-                    Task.Delay((int)(1000f / (float)FPS));
+                    Task.Delay((int)(1000f / (float)FPS)).Wait();
                 }
             }).Start();
+        }
+        public override void Dispose()
+        {
+            
         }
     }
 }

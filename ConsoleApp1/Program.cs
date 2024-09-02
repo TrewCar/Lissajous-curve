@@ -27,8 +27,8 @@ class Program
             //new Wave(660f, 0.2f, 0),    // В обоих каналах равномерно
         };
 
-        WaveGenerator waveGenerator = new WaveGenerator(sampleRate, (int)FPS);
-
+        //AudioGenerator waveGenerator = new WaveGenerator(44100, (int)FPS, waves);
+        NAudioPcConverter waveGenerator = new NAudioPcConverter();
         window.SetActive(false);
         FPSCounter fpsCounter = new FPSCounter();
 
@@ -37,7 +37,7 @@ class Program
         bool dataReady = false;
 
         // Генерация стерео данных в отдельной задаче
-        waveGenerator.GenerateStereoWave(waves, (left, right) =>
+        waveGenerator.StartGenerating((left, right) =>
         {
             lock (leftChannel)
             {
